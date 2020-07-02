@@ -7,20 +7,17 @@ using CefSharp.WinForms;
 using System;
 using System.Windows.Forms;
 
-namespace CefSharp.MinimalExample.WinForms
-{
-    public partial class BrowserForm : Form
-    {
+namespace CefSharp.MinimalExample.WinForms {
+    public partial class BrowserForm : Form {
         private readonly ChromiumWebBrowser browser;
 
-        public BrowserForm()
-        {
+        public BrowserForm() {
             InitializeComponent();
 
             Text = "CefSharp";
             WindowState = FormWindowState.Maximized;
 
-            browser = new ChromiumWebBrowser("www.google.com");
+            browser = new ChromiumWebBrowser("", null);
             toolStripContainer.ContentPanel.Controls.Add(browser);
 
             browser.IsBrowserInitializedChanged += OnIsBrowserInitializedChanged;
@@ -29,6 +26,15 @@ namespace CefSharp.MinimalExample.WinForms
             browser.StatusMessage += OnBrowserStatusMessage;
             browser.TitleChanged += OnBrowserTitleChanged;
             browser.AddressChanged += OnBrowserAddressChanged;
+            browser.JavascriptObjectRepository.ResolveObject += (sender, e) => {
+                var repo = e.ObjectRepository;
+                if (e.ObjectName == "boundAsync2") {
+                    BindingOptions bindingOptions = null; //Binding options is an optional param, defaults to null
+                    bindingOptions = BindingOptions.DefaultBinder; //Use the default binder to serialize values into complex objects, CamelCaseJavascriptNames = true is the default
+                    bindingOptions.CamelCaseJavascriptNames = false;
+                    repo.Register(e.ObjectName, new BoundAsync2(), isAsync: true, options: bindingOptions);
+                }
+            };
 
             var version = string.Format("Chromium: {0}, CEF: {1}, CefSharp: {2}",
                Cef.ChromiumVersion, Cef.CefVersion, Cef.CefSharpVersion);
@@ -47,53 +53,44 @@ namespace CefSharp.MinimalExample.WinForms
             DisplayOutput(string.Format("{0}, {1}", version, environment));
         }
 
-        private void OnIsBrowserInitializedChanged(object sender, EventArgs e)
-        {
+        private void OnIsBrowserInitializedChanged(object sender, EventArgs e) {
             var b = ((ChromiumWebBrowser)sender);
 
             this.InvokeOnUiThreadIfRequired(() => b.Focus());
         }
 
-        private void OnBrowserConsoleMessage(object sender, ConsoleMessageEventArgs args)
-        {
+        private void OnBrowserConsoleMessage(object sender, ConsoleMessageEventArgs args) {
             DisplayOutput(string.Format("Line: {0}, Source: {1}, Message: {2}", args.Line, args.Source, args.Message));
         }
 
-        private void OnBrowserStatusMessage(object sender, StatusMessageEventArgs args)
-        {
+        private void OnBrowserStatusMessage(object sender, StatusMessageEventArgs args) {
             this.InvokeOnUiThreadIfRequired(() => statusLabel.Text = args.Value);
         }
 
-        private void OnLoadingStateChanged(object sender, LoadingStateChangedEventArgs args)
-        {
+        private void OnLoadingStateChanged(object sender, LoadingStateChangedEventArgs args) {
             SetCanGoBack(args.CanGoBack);
             SetCanGoForward(args.CanGoForward);
 
             this.InvokeOnUiThreadIfRequired(() => SetIsLoading(!args.CanReload));
         }
 
-        private void OnBrowserTitleChanged(object sender, TitleChangedEventArgs args)
-        {
+        private void OnBrowserTitleChanged(object sender, TitleChangedEventArgs args) {
             this.InvokeOnUiThreadIfRequired(() => Text = args.Title);
         }
 
-        private void OnBrowserAddressChanged(object sender, AddressChangedEventArgs args)
-        {
+        private void OnBrowserAddressChanged(object sender, AddressChangedEventArgs args) {
             this.InvokeOnUiThreadIfRequired(() => urlTextBox.Text = args.Address);
         }
 
-        private void SetCanGoBack(bool canGoBack)
-        {
+        private void SetCanGoBack(bool canGoBack) {
             this.InvokeOnUiThreadIfRequired(() => backButton.Enabled = canGoBack);
         }
 
-        private void SetCanGoForward(bool canGoForward)
-        {
+        private void SetCanGoForward(bool canGoForward) {
             this.InvokeOnUiThreadIfRequired(() => forwardButton.Enabled = canGoForward);
         }
 
-        private void SetIsLoading(bool isLoading)
-        {
+        private void SetIsLoading(bool isLoading) {
             goButton.Text = isLoading ?
                 "Stop" :
                 "Go";
@@ -104,72 +101,63 @@ namespace CefSharp.MinimalExample.WinForms
             HandleToolStripLayout();
         }
 
-        public void DisplayOutput(string output)
-        {
+        public void DisplayOutput(string output) {
             this.InvokeOnUiThreadIfRequired(() => outputLabel.Text = output);
         }
 
-        private void HandleToolStripLayout(object sender, LayoutEventArgs e)
-        {
+        private void HandleToolStripLayout(object sender, LayoutEventArgs e) {
             HandleToolStripLayout();
         }
 
-        private void HandleToolStripLayout()
-        {
+        private void HandleToolStripLayout() {
             var width = toolStrip1.Width;
-            foreach (ToolStripItem item in toolStrip1.Items)
-            {
-                if (item != urlTextBox)
-                {
+            foreach (ToolStripItem item in toolStrip1.Items) {
+                if (item != urlTextBox) {
                     width -= item.Width - item.Margin.Horizontal;
                 }
             }
             urlTextBox.Width = Math.Max(0, width - urlTextBox.Margin.Horizontal - 18);
         }
 
-        private void ExitMenuItemClick(object sender, EventArgs e)
-        {
+        private void ExitMenuItemClick(object sender, EventArgs e) {
             browser.Dispose();
             Cef.Shutdown();
             Close();
         }
 
-        private void GoButtonClick(object sender, EventArgs e)
-        {
+        private void GoButtonClick(object sender, EventArgs e) {
             LoadUrl(urlTextBox.Text);
         }
 
-        private void BackButtonClick(object sender, EventArgs e)
-        {
+        private void BackButtonClick(object sender, EventArgs e) {
             browser.Back();
         }
 
-        private void ForwardButtonClick(object sender, EventArgs e)
-        {
+        private void ForwardButtonClick(object sender, EventArgs e) {
             browser.Forward();
         }
 
-        private void UrlTextBoxKeyUp(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode != Keys.Enter)
-            {
+        private void UrlTextBoxKeyUp(object sender, KeyEventArgs e) {
+            if (e.KeyCode != Keys.Enter) {
                 return;
             }
 
             LoadUrl(urlTextBox.Text);
         }
 
-        private void LoadUrl(string url)
-        {
-            if (Uri.IsWellFormedUriString(url, UriKind.RelativeOrAbsolute))
-            {
+        private void LoadUrl(string url) {
+            if (Uri.IsWellFormedUriString(url, UriKind.RelativeOrAbsolute)) {
                 browser.Load(url);
             }
         }
 
-        private void ShowDevToolsMenuItemClick(object sender, EventArgs e)
-        {
+        private void ShowDevToolsMenuItemClick(object sender, EventArgs e) {
             browser.ShowDevTools();
+        }
+    }
+    public class BoundAsync2 {
+        public string hello(string s) {
+            return "Hello " + s;
         }
     }
 }

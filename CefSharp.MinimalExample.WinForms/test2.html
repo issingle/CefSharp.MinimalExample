@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="scripts/jquery.min.js"></script>
+</head>
+<body>
+    <div>v1</div>
+    <script type="text/javascript">
+        function Main() {
+
+            var foo = async function () {
+                var ret = CefSharp.RemoveObjectFromCache("boundAsync2");
+                alert("1");
+                var ret2 = CefSharp.DeleteBoundObject("boundAsync2");
+                alert("2");
+                try {
+                    await CefSharp.BindObjectAsync({ NotifyIfAlreadyBound: true, IgnoreCache: true }, "boundAsync2");
+                } catch (err) {
+                    alert(err);
+                }
+                alert("3");
+                var ret3 = await boundAsync2.hello(" world");
+                alert(ret3);
+            };
+            foo();
+        }
+
+        $(function () {
+            Main();
+        });
+    </script>
+</body>
+</html>
